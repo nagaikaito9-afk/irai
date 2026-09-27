@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>こうえんのネコさがし - 公園にかくれた猫を見つけよう！</title>
+  <meta name="description" content="公園のベンチやすべり台、ダンボールや植え込みに隠れた可愛いネコたちを探そう！レベルが上がるごとに隠れ場所が難しくなるよ！">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@600;800;900&family=Outfit:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="game-app">
+    <!-- ヘッダーUI -->
+    <header id="game-header">
+      <div class="header-left">
+        <h1 class="game-title">
+          <span class="icon">🐾</span>
+          <span class="text">こうえんのネコさがし</span>
+        </h1>
+        <div class="level-badge" id="level-badge">Lv. 1</div>
+      </div>
+
+      <div class="header-center">
+        <div class="stat-card" id="target-card">
+          <div class="stat-label">みつけるネコ</div>
+          <div class="target-container" id="target-display">
+            <span class="target-icon">🐱</span>
+            <span class="target-count" id="target-count">0 / 1</span>
+          </div>
+        </div>
+
+        <div class="stat-card" id="timer-card">
+          <div class="stat-label">のこり時間</div>
+          <div class="stat-value" id="timer-text">50s</div>
+        </div>
+
+        <div class="stat-card" id="score-card">
+          <div class="stat-label">スコア</div>
+          <div class="stat-value" id="score-text">0</div>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <!-- お助けアイテム -->
+        <button id="btn-bell" class="action-btn item-btn" title="鈴（ネコが鳴いて居場所を教えてくれるよ！）">
+          <span class="btn-icon">🔔</span>
+          <span class="btn-badge" id="bell-badge">3</span>
+        </button>
+        <button id="btn-hint" class="action-btn item-btn" title="虫めがねヒント（隠れている場所が光るよ）">
+          <span class="btn-icon">🔍</span>
+          <span class="btn-badge" id="hint-badge">2</span>
+        </button>
+        <button id="btn-sound" class="action-btn" title="サウンド切替">
+          <span class="btn-icon" id="sound-icon">🔊</span>
+        </button>
+        <button id="btn-collection" class="action-btn" title="ネコ図鑑">
+          <span class="btn-icon">📖</span>
+        </button>
+        <button id="btn-pause" class="action-btn" title="メニュー">
+          <span class="btn-icon">⚙️</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 公園フィールド (軽量・高レスポンス Canvas & インタラクティブUI) -->
+    <main id="park-container">
+      <canvas id="park-canvas"></canvas>
+      <div id="interaction-hint">公園の気になる場所をタップしてネコを探そう！ 🌳</div>
+      <div id="effect-layer"></div>
+    </main>
+
+    <!-- レベルクリア モーダル -->
+    <div id="modal-clear" class="modal-overlay hidden">
+      <div class="modal-card bounce-in">
+        <div class="modal-ribbon">LEVEL CLEAR! 🎉</div>
+        <div class="stars-row" id="clear-stars">
+          <span class="star active">★</span>
+          <span class="star active">★</span>
+          <span class="star active">★</span>
+        </div>
+        <h2 class="modal-heading" id="clear-heading">公園のネコをぜんぶ発見！</h2>
+        <div class="found-cats-gallery" id="found-cats-gallery"></div>
+        <div class="clear-stats">
+          <div class="clear-stat-item">
+            <span>残り時間ボーナス:</span>
+            <strong id="stat-time-bonus">+0</strong>
+          </div>
+          <div class="clear-stat-item">
+            <span>発見ボーナス:</span>
+            <strong id="stat-stage-score">0</strong>
+          </div>
+          <div class="clear-stat-item total">
+            <span>トータルスコア:</span>
+            <strong id="stat-total-score">0</strong>
+          </div>
+        </div>
+        <div class="modal-buttons">
+          <button id="btn-next-level" class="primary-btn">つぎのレベルへ 🐾</button>
+          <button id="btn-retry" class="secondary-btn">もう一度あそぶ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- タイムアップ モーダル -->
+    <div id="modal-gameover" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-ribbon failed">TIME UP... 😿</div>
+        <h2 class="modal-heading">ネコたちはもっと奥へ隠れちゃった...</h2>
+        <p class="modal-desc">時間切れになってしまいました。もう一度公園を探してみよう！</p>
+        <div class="modal-buttons">
+          <button id="btn-gameover-retry" class="primary-btn">再挑戦する 🔁</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ネコ図鑑 モーダル -->
+    <div id="modal-collection" class="modal-overlay hidden">
+      <div class="modal-card wide">
+        <div class="modal-header-row">
+          <h2>🐱 ネコずかん (<span id="collection-unlocked-count">0</span> / <span id="collection-total-count">10</span>)</h2>
+          <button id="btn-close-collection" class="close-btn">&times;</button>
+        </div>
+        <p class="collection-sub">公園で見つけたネコたちの記録です。タップすると鳴くよ！</p>
+        <div id="collection-grid" class="collection-grid"></div>
+      </div>
+    </div>
+
+    <!-- メニュー・設定 モーダル -->
+    <div id="modal-pause" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-header-row">
+          <h2>メニュー・設定</h2>
+          <button id="btn-close-pause" class="close-btn">&times;</button>
+        </div>
+        <div class="settings-group">
+          <label class="setting-item">
+            <span>効果音（鳴き声・タップ音）</span>
+            <input type="checkbox" id="check-sfx" checked>
+          </label>
+          <label class="setting-item">
+            <span>BGM / 環境音（公園の鳥のさえずり）</span>
+            <input type="checkbox" id="check-bgm" checked>
+          </label>
+        </div>
+        <div class="modal-buttons" style="margin-top: 20px;">
+          <button id="btn-resume" class="primary-btn">つづける</button>
+          <button id="btn-restart-level" class="secondary-btn">このレベルを最初から</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- タイトル画面 -->
+    <div id="screen-title" class="title-screen">
+      <div class="title-content bounce-in">
+        <div class="title-cat-mascot">
+          <img class="mascot-cat-img" src="" alt="公園のネコ">
+        </div>
+        <h1 class="main-title">こうえんのネコさがし</h1>
+        <p class="title-subtitle">〜 ベンチや遊具、草木にかくれたネコを見つけよう 〜</p>
+
+        <div class="how-to-play-box">
+          <div class="how-title">🐾 あそびかた</div>
+          <ul>
+            <li>🌳 植え込み、ベンチの下、すべり台、ダンボール箱をタップしよう！</li>
+            <li>👀 レベルが上がると、しっかりかき分けたり箱を開けないと見つからないよ！</li>
+            <li>🔔 困ったら「鈴」で鳴き声をきいたり「虫めがね」でヒントを使おう！</li>
+          </ul>
+        </div>
+
+        <div class="title-buttons">
+          <button id="btn-start-game" class="huge-start-btn">
+            <span class="btn-shine"></span>
+            <span>公園へあそびに行く！ 🌳🐾</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/audio.js"></script>
+  <script src="js/cats.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
